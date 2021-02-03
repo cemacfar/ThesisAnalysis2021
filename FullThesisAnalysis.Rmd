@@ -1,0 +1,233 @@
+---
+title: "The Bacterial and Parasitic Microbiome of Howler Monkeys"
+author: "Colin Macfarland"
+date: "03/02/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Parasite Interactions with the Gastrointestinal Bacterial Microbiome
+
+In my first data chapter I asked if a positive helminth infection in the howler monkey gut demonstrates a significant difference in relative abundance of two bacterial orders; Bacteroidales and Clostridiales.  Additionally, I looked at general parasite abundance through morphological identification of parasite eggs, and if the alpha and beta diversity of bacterial communites was significantly different between infected and uninfected howler monkeys.  
+
+Preparing the data for analysis
+```{r}
+setwd("~/Bioinformatics")
+
+if (!requireNamespace("BiocManager", quietly = TRUE))
+  install.packages("BiocManager")
+
+BiocManager::install("phyloseq")
+BiocManager::install("DESeq2")
+BiocManager::install("decontam")
+BiocManager::install("ShortRead")
+
+install.packages("readxl")
+install.packages("tidyverse")
+
+library(phyloseq) #needed moving forward for statistical testing
+library(DESeq2) #will be used to do differential abundance
+library(decontam) #gets rid of the blanks
+library(readxl) #read in the datasheet
+library(tidyverse) #needed to help organize the howler metadata
+library(ShortRead) #needed to read in the Fasta files
+library(ggplot2)
+library(ggpubr)
+library(wesanderson)
+library(viridis)
+
+#import the data and decontaminate the samples
+Howler_Metadata16s = read_excel("Howler Metadata2.xlsx",
+                                sheet = "16s")
+asv_fasta_dada = readFasta("dadaspASVs.fa")
+asv_tax_dada = read.table("dadaspASVs_taxonomy.txt",
+                          header = T,
+                          row.names = 1,
+                          check.names = F,
+                          sep = "\t")
+asv_tab_dada = read.table("dadaspASVs_counts.txt",
+                          header = T,
+                          row.names = 1,
+                          check.names = F,
+                          sep = "\t")
+
+colnames(asv_tab_dada)
+#blanks are last samples, 74 to 84
+#logical vector for last 11 samples
+decontam_logic_dada = c(rep(TRUE, 73), rep(FALSE, 11))
+
+contam_df_dada = isContaminant(t(asv_tab_dada), neg = decontam_logic_dada)
+
+table(contam_df_dada$contaminant)
+contam_asvs_dada = row.names(contam_df_dada[contam_df_dada$contaminant == TRUE,])
+
+# making new count table
+asv_tab_no_contam_dada = asv_tab_dada[!row.names(asv_tab_dada) %in% contam_asvs_dada, ]
+# making new taxonomy table
+asv_tax_no_contam_dada = asv_tax_dada[!row.names(asv_tax_dada) %in% contam_asvs_dada, ]
+
+
+phyotu16 = otu_table(asv_tab_no_contam_dada, taxa_are_rows = TRUE)
+phytax16 = tax_table(as.matrix(asv_tax_no_contam_dada))
+phytest16 = phyloseq(phyotu16, phytax16)
+phytest16
+
+howmeta.df16 = Howler_Metadata16s %>% select(-sample) %>% as.data.frame
+rownames(howmeta.df16) = Howler_Metadata16s$sample
+howler.data16 = sample_data(howmeta.df16, errorIfNULL = F)
+
+setdiff(colnames(phyotu16), rownames(howler.data16))
+#no differences in names, should merge together 
+
+phytestsamp16 = merge_phyloseq(phytest16, howler.data16)
+phytestsamp16
+
+#rename for ease moving forward
+phy16sbl = phytestsamp16
+
+#take out blank samples
+phy16s = prune_samples(sample_names(phy16sbl)[1:73], phy16sbl)
+sample_names(phy16s)
+```
+
+
+I found that some Bacteroidales bacteria were proportionally lower in abundance when helminths were found in the gut, while Clostridiales were proportionally higher in abundance. A similar relationship was found in human and mice experiments in a study by [Ramanan et. al. 2016](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4905769/).  
+
+```{r}
+helminf = subset_samples(phy16s, Helminth_Infection != "NA")
+helminfhighcounts = prune_samples(sample_sums(helminf) > 500, helminf) 
+#all were over 1000 so no low read counts for any sample
+
+deseqhelm = phyloseq_to_deseq2(helminfhighcounts, ~ Helminth_Infection)
+gm_mean = function(x, na.rm=TRUE){
+  exp(sum(log(x[x > 0]), na.rm=na.rm) / length(x))
+}
+geoMeans = apply(counts(deseqhelm), 1, gm_mean)
+deseqhelm = estimateSizeFactors(deseqhelm, geoMeans = geoMeans)
+deseqhelm = DESeq(deseqhelm, test="Wald", fitType="local")
+
+res = results(deseqhelm)
+res = res[order(res$padj, na.last=NA), ]
+alpha = 0.01
+sigtab = res[(res$padj < alpha), ]
+sigtab = cbind(as(sigtab, "data.frame"),
+               as(tax_table(helminfhighcounts)[rownames(sigtab), ], "matrix"))
+head(sigtab)
+
+# Phylum order - order from highest to lowest log2fold change for visual appeal
+x = tapply(sigtab$log2FoldChange, sigtab$Order, function(x) max(x))
+x = sort(x, TRUE)
+sigtab$Phylum = factor(as.character(sigtab$Order), levels=names(x))
+
+# Make the figure
+p_DiffExp_helm <- ggplot(sigtab, aes(x=Family, y=log2FoldChange, color=Order, size = baseMean)) + 
+  geom_point() + 
+  geom_hline(yintercept = 0, linetype="dotted", alpha=0.5) +
+  theme(axis.text.x = element_text(angle = -50, hjust = 0, vjust=0.5)) +
+  scale_colour_viridis(discrete = T); p_DiffExp_helm
+
+allASV = na.omit(res)
+allASV = cbind(as(allASV, "data.frame"),
+               as(tax_table(helminfhighcounts)[rownames(allASV), ], "matrix"))
+
+p_DiffExp_helm_ALL = ggplot(allASV, aes(x=Class, y=log2FoldChange, color=Phylum)) +
+  geom_jitter(size = 1, width = 0.2) +
+  theme(axis.text.x = element_text(angle = -90)) +
+  scale_colour_viridis(discrete = T); p_DiffExp_helm_ALL
+
+```
+
+Figure **A** showing log fold changes of all ASVs that were classified, and figure **B** showing only those that had a significant log fold change when comparing helminth positive and negative howlers.
+```{r}
+figure4combo = ggarrange(p_DiffExp_helm_ALL, p_DiffExp_helm, nrow = 2, labels = "AUTO"); figure4combo
+```
+
+## General Parasite Prevalence
+
+When looking at the parasite prevalence, only helminths that could be morphologically identified through microscopy were considered. Smaller parasites such as *Giardia* or *Cryptosporidia* could not be reliably identified without staining or genetic methods.  The percent prevalence is a simple count of the proportion of samples at least one of each parasite was found in.
+
+```{r}
+paraprev <- read_excel("~/Desktop/Masters /Writing/Figure.xlsx", 
+                       sheet = "fig1")
+View(paraprev)
+
+Parasite_Prevalence = paraprev %>%
+  arrange(Prevalence) %>%  
+  mutate(Parasite = factor(Parasite, levels=c("C. biliophilus", "Unidentified Trematode", "Strongyloides sp.", 
+                              "Pinworm (Enterobius sp.)", "Unknown"))) %>%
+  ggplot(aes(x = Parasite, y = Prevalence)) + 
+      geom_col() +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
+      geom_text(aes(label=Prevalence), vjust = -0.4);Parasite_Prevalence
+```
+
+
+## Alpha and Beta Diversity
+
+```{r}
+library(viridis)
+plot_richness(Coprolog, 
+              x="Helminth_Infection", 
+              measures=c("Chao1","Shannon"), 
+              color = "Helminth_Infection") + 
+  geom_boxplot() +
+  theme(legend.position = "none") +
+  labs(x = "Helminth Infection") +
+  scale_color_manual(values = wes_palette("Darjeeling2"))
+
+alphtest = estimate_richness(Coprolog)
+#Shannon is diversity. Sig diff in diversity of bacteria, taking into account the richness and evenness
+pairwise.wilcox.test(alphtest$Shannon, sample_data(Coprolog)$Helminth_Infection) #santa and tam 0.03, santa and hela 0.0005, santa and tam 0.6
+#CHAO1 is richness. Sig diff in richness of bacteria, none
+#Simpson measures what shannon does but places less emphasis on rare species, they will have less impact
+pairwise.wilcox.test(alphtest$Chao1, sample_data(Coprolog)$Helminth_Infection)
+#16s beta diversity clustering
+library(microbiome)
+phy16hellog = transform(Coprolog, transform = "log10")
+phy16helhell = transform(Coprolog, transform = "hellinger")
+
+ord.nmds.bray16hel = ordinate(phy16hellog, method="NMDS", distance="bray")
+plot_ordination(phy16hellog, ord.nmds.bray16hel, color="Helminth_Infection", title="16s Bray NMDS Infection log trans")
+
+ord.nmds.bray16hel = ordinate(phy16hellog, method="PCoA", distance="bray")
+plot_ordination(phy16hellog, ord.nmds.bray16hel, color="Helminth_Infection") +
+  scale_color_manual(values = wes_palette("Darjeeling2")) +
+  labs(color = "Helminth Infection")
+
+
+library(vegan)
+phydist = phyloseq::distance(phy16hellog, "bray")
+df = as(sample_data(phy16hellog), "data.frame")
+groups = df[["Helminth_Infection"]]
+groups
+
+mod = betadisper(phydist, groups)
+anova(mod)
+mod.HSD = TukeyHSD(mod)
+
+plot(mod)
+boxplot(mod)
+plot(mod.HSD)
+
+mod2 = betadisper(phydist, groups, bias.adjust = T)
+anova(mod2)
+mod.HSD2 = TukeyHSD(mod2)
+plot(mod.HSD2)
+
+adonis(phydist ~ groups, perm = 999)
+
+df
+
+library(pairwiseAdonis)
+pairwise.adonis(phydist, groups)
+
+ord.nmds.bray16hel2 = ordinate(phy16helhell, method="NMDS", distance="bray")
+plot_ordination(phy16helhell, ord.nmds.bray16hel2, color="Helminth_Infection", title="16s Bray NMDS Infection hellinger trans")
+```
+
+
+
+
