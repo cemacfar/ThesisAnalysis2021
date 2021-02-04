@@ -147,7 +147,7 @@ figure4combo = ggarrange(p_DiffExp_helm_ALL, p_DiffExp_helm, nrow = 2, labels = 
 
 ## General Parasite Prevalence
 
-When looking at the parasite prevalence, only helminths that could be morphologically identified through microscopy were considered. Smaller parasites such as *Giardia* or *Cryptosporidia* could not be reliably identified without staining or genetic methods.  The percent prevalence is a simple count of the proportion of samples at least one of each parasite was found in.
+When looking at the parasite prevalence, only helminths that could be morphologically identified through microscopy were considered. Smaller parasites such as *Giardia* or *Cryptosporidia* could not be reliably identified without staining or genetic methods.  The percent prevalence is a simple count of the proportion of samples at least one of each parasite was found in.  I found that *Controrchis* spp. was the most prevalent parasite, similar to what has been reported previously, and likely is due to a common plant and staple food source, *Cecropia* spp. 
 
 ```{r}
 paraprev <- read_excel("~/Desktop/Masters /Writing/Figure.xlsx", 
@@ -166,6 +166,8 @@ Parasite_Prevalence = paraprev %>%
 
 
 ## Alpha and Beta Diversity
+
+I did not find significant changes in the alpha and beta diversity of howlers when parasite presence was the tested variable.
 
 ```{r}
 library(viridis)
@@ -228,6 +230,131 @@ ord.nmds.bray16hel2 = ordinate(phy16helhell, method="NMDS", distance="bray")
 plot_ordination(phy16helhell, ord.nmds.bray16hel2, color="Helminth_Infection", title="16s Bray NMDS Infection hellinger trans")
 ```
 
+## Anthopogenic Forest Fragmentation effects on the GI Bacterial Microbiome
 
+In my second chapter I examined if habitat fragmentation/proximity to human development plays a role in lowering bacterial diversity in the howler gastrointestinal microbiome. This was done by looking at 21 howler fecal samples frozen in liquid nitrogen, taken from three locations; Sector Santa Rosa (SSR), located within the Area Conservacion de Guanacaste, a world hertiage site, a social group of howlers near Tamarindo, and a social group of howlers living around a Ranch/Tourist location (Eladio's).
+
+I examined alpha diversity and found that in the howlers living around Eladio's had significantly lowered diversity compared to SSR and Tamarindo howler sample groups.  
+
+```{r}
+#alpha diversity 
+
+library(ggplot2)
+
+#CHAO1 is RICHNESS and SHANNON is DIVERSITY
+Frozsamp = subset_samples(phy16s, storage=="Liquid Nitrogen") #only frozen samples
+Costasamp = subset_samples(phy16s, field_site != "Monkey River") #all Costa Rica samples, frozen and ethanol
+
+#alpha significance
+alphatest = estimate_richness(Costasamp)
+
+pairwise.wilcox.test(alphatest$Shannon, sample_data(Costasamp)$field_site) 
+pairwise.wilcox.test(alphatest$Simpson, sample_data(Costasamp)$field_site)
+pairwise.wilcox.test(alphtest$Chao1, sample_data(Costasamp)$field_site)
+pairwise.wilcox.test(alphtest$Chao1, sample_data(Costasamp)$fragmentation)
+pairwise.wilcox.test(alphtest$Shannon, sample_data(Costasamp)$fragmentation)
+#ssr and tam 0.03, ssr and eladio 0.0005, ssr and tam 0.6
+#CHAO1 is richness. Sig diff in richness of bacteria, so significance
+#Simpson measures similar to shannon, but places less emphasis on rare asvs, they will have less impact
+
+#visualize without untransformed for alpha diversity
+library(viridis) #palatte
+library(wesanderson) #palatte
+
+#final figures
+sample_data(Costasamp)$field_site = factor(sample_data(Costasamp)$field_site, levels = c("Santa Rosa","Eladio's Ranch","Tamarindo"))
+Allhabitat = plot_richness(Costasamp, 
+              x="field_site", 
+              color = "field_site",
+              measures=c("Chao1","Shannon", "Simpson")) + 
+  theme(legend.title = element_blank()) +
+  geom_boxplot() +
+  labs(x = "Habitat") +
+  scale_color_manual(values = wes_palette("Darjeeling2"))
+
+Fragm = plot_richness(Costasamp,
+              x="fragmentation",
+              color = "fragmentation",
+              measures = c("Chao1", "Shannon", "Simpson")) +
+  theme(legend.title = element_blank()) +
+  geom_boxplot() +
+  labs(x = "Habitat") +
+  scale_color_manual(values = wes_palette("Darjeeling2"))
+library(ggpubr)
+figurealphacombo = ggarrange(Allhabitat, Fragm, nrow = 2, labels = "AUTO")
+```
+
+I additionally found that the howler beta diversity was distinct between all three sites, an ADONIS test showing that howlers in SSR, Tamarindo, and Eladio's had distinct bacterial diversity in their gut.   
+
+```{r}
+#beta diversity
+#use transformed data
+#betadisper to check for homogeneous dispersal and acceptable variance
+
+library(vegan)
+#install.packages("devtools")
+library(devtools)
+#install_github("pmartinezarbizu/pairwiseAdonis/pairwiseAdonis")
+library(pairwiseAdonis)
+
+phydist = phyloseq::distance(phy16log, "bray")
+df = as(sample_data(phy16log), "data.frame")
+groups = df[["field_site"]]
+groups
+
+mod = betadisper(phydist, groups)
+anova(mod)
+mod.HSD = TukeyHSD(mod)
+
+plot(mod)
+boxplot(mod)
+plot(mod.HSD)
+
+mod2 = betadisper(phydist, groups, bias.adjust = T)
+anova(mod2)
+mod.HSD2 = TukeyHSD(mod2)
+plot(mod.HSD2)
+
+adonis(phydist ~ groups, perm = 999)
+
+df
+
+pairwise.adonis(phydist, groups)
+#betadisper testing shows acceptable variance and homogeneous dispersal, can continue to adonis, and results can be interpreted
+#pairwise adonis between all groups, showing all have significantly different bacterial diversity
+
+
+library(microbiome)
+phy16log = transform(Costasamp, transform = "log10")
+
+#other transformation options
+#phy16hell = transform(Costasamp, transform = "hellinger")
+#phy16sprop2 = transform_sample_counts(Costasamp, function(otu) otu/sum(otu))
+
+ord.nmds.bray16log = ordinate(phy16log, method="PCoA", distance="bray")
+plot_ordination(phy16log, ord.nmds.bray16log, color="field_site") +
+  scale_color_manual(values = wes_palette("Darjeeling2")) +
+  labs(color = "Habitat") +
+  stat_ellipse()
+#PCoA plot of Bray Curtis dissimilarity, with ellipses to show clustering of groups, determined to be significant with the pairwise ADONIS
+```
+
+Finally, I found that howlers in SSR, the most isolated group, had the highest density of parasite infection, measured in parasite eggs per mL of fecal sample (after the sample was homogenized in ethanol it was stored in). 
+
+```{r}
+paralocaldens <- read_excel("Desktop/Masters /Writing/Figure.xlsx", 
+                            sheet = "fig2edit")
+View(paralocaldens)
+
+Parasite_Density = paralocaldens %>%
+  arrange(AveDens) %>%  
+  mutate(Location = factor(Location, levels=c("Santa Rosa (n = 13)", "Fragmented (n = 8)"))) %>%
+  ggplot(aes(x = Location, y = AveDens)) + 
+                      geom_col(aes(fill = Location)) +
+                      ylab("Density (eggs/mL)") +
+  scale_fill_manual(values = wes_palette("Darjeeling2")) +
+  theme(legend.position = "none") +
+  geom_errorbar(aes(ymin=AveDens-SE, ymax=AveDens+SE), width=.05); Parasite_Density
+```
 
 
