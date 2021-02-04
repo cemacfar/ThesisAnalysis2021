@@ -38,7 +38,7 @@ library(viridis) #colour palette
 In my first data chapter I asked if a positive helminth infection in the howler monkey gut demonstrates a significant difference in relative abundance of two bacterial orders; Bacteroidales and Clostridiales.  Additionally, I looked at general parasite abundance through morphological identification of parasite eggs, and if the alpha and beta diversity of bacterial communites was significantly different between infected and uninfected howler monkeys.  
 
 Preparing the data for analysis
-```{r}
+```{r echo = TRUE, warning = FALSE, message = FALSE}
 #import the data and decontaminate the samples
 Howler_Metadata16s = read_excel("Howler Metadata2.xlsx",
                                 sheet = "16s")
@@ -96,7 +96,7 @@ sample_names(phy16s)
 
 I found that some Bacteroidales bacteria were proportionally lower in abundance when helminths were found in the gut, while Clostridiales were proportionally higher in abundance. A similar relationship was found in human and mice experiments in a study by [Ramanan et. al. 2016](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4905769/).  
 
-```{r}
+```{r message = FALSE, warning = FALSE}
 helminf = subset_samples(phy16s, Helminth_Infection != "NA")
 helminfhighcounts = prune_samples(sample_sums(helminf) > 500, helminf) 
 #all were over 1000 so no low read counts for any sample
@@ -141,7 +141,7 @@ p_DiffExp_helm_ALL = ggplot(allASV, aes(x=Class, y=log2FoldChange, color=Phylum)
 ```
 
 Figure **A** showing log fold changes of all ASVs that were classified, and figure **B** showing only those that had a significant log fold change when comparing helminth positive and negative howlers.
-```{r}
+```{r echo = FALSE}
 figure4combo = ggarrange(p_DiffExp_helm_ALL, p_DiffExp_helm, nrow = 2, labels = "AUTO"); figure4combo
 ```
 
@@ -149,7 +149,7 @@ figure4combo = ggarrange(p_DiffExp_helm_ALL, p_DiffExp_helm, nrow = 2, labels = 
 
 When looking at the parasite prevalence, only helminths that could be morphologically identified through microscopy were considered. Smaller parasites such as *Giardia* or *Cryptosporidia* could not be reliably identified without staining or genetic methods.  The percent prevalence is a simple count of the proportion of samples at least one of each parasite was found in.  I found that *Controrchis* spp. was the most prevalent parasite, similar to what has been reported previously, and likely is due to a common plant and staple food source, *Cecropia* spp. 
 
-```{r}
+```{r message = FALSE, warning = FALSE}
 paraprev <- read_excel("~/Desktop/Masters /Writing/Figure.xlsx", 
                        sheet = "fig1")
 View(paraprev)
@@ -169,7 +169,7 @@ Parasite_Prevalence = paraprev %>%
 
 I did not find significant changes in the alpha and beta diversity of howlers when parasite presence was the tested variable.
 
-```{r}
+```{r warning = FALSE}
 library(viridis)
 plot_richness(Coprolog, 
               x="Helminth_Infection", 
@@ -236,7 +236,7 @@ In my second chapter I examined if habitat fragmentation/proximity to human deve
 
 I examined alpha diversity and found that in the howlers living around Eladio's had significantly lowered diversity compared to SSR and Tamarindo howler sample groups.  
 
-```{r}
+```{r warning = FALSE}
 #alpha diversity 
 
 library(ggplot2)
@@ -286,7 +286,7 @@ figurealphacombo = ggarrange(Allhabitat, Fragm, nrow = 2, labels = "AUTO")
 
 I additionally found that the howler beta diversity was distinct between all three sites, an ADONIS test showing that howlers in SSR, Tamarindo, and Eladio's had distinct bacterial diversity in their gut.   
 
-```{r}
+```{r warning = FALSE}
 #beta diversity
 #use transformed data
 #betadisper to check for homogeneous dispersal and acceptable variance
@@ -341,7 +341,7 @@ plot_ordination(phy16log, ord.nmds.bray16log, color="field_site") +
 
 Finally, I found that howlers in SSR, the most isolated group, had the highest density of parasite infection, measured in parasite eggs per mL of fecal sample (after the sample was homogenized in ethanol it was stored in). 
 
-```{r}
+```{r warning = FALSE}
 paralocaldens <- read_excel("Desktop/Masters /Writing/Figure.xlsx", 
                             sheet = "fig2edit")
 View(paralocaldens)
