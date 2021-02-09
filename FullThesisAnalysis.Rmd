@@ -519,6 +519,6 @@ ord.nmds.bray16log = ordinate(phy16log, method="PCoA", distance="bray")
 plot_ordination(phy16log, ord.nmds.bray16log, color="storage") +
   scale_color_manual(values = wes_palette("Darjeeling2")) +
   labs(color = "Storage Method") +
-  stat_ellipse()
+  stat_ellipse() 
 ```
 
