@@ -40,7 +40,7 @@ In my first data chapter I asked if a positive helminth infection in the howler 
 Preparing the data for analysis
 ```{r echo = TRUE, warning = FALSE, message = FALSE}
 #import the data and decontaminate the samples
-Howler_Metadata16s = read_excel("Howler Metadata2.xlsx",
+Howler_Metadata16s = read_excel("Howler Metadata.xlsx",
                                 sheet = "16s")
 asv_fasta_dada = readFasta("dadaspASVs.fa")
 asv_tax_dada = read.table("dadaspASVs_taxonomy.txt",
@@ -242,7 +242,6 @@ I examined alpha diversity and found that in the howlers living around Eladio's 
 library(ggplot2)
 
 #CHAO1 is RICHNESS and SHANNON is DIVERSITY
-Frozsamp = subset_samples(phy16s, storage=="Liquid Nitrogen") #only frozen samples
 Costasamp = subset_samples(phy16s, field_site != "Monkey River") #all Costa Rica samples, frozen and ethanol
 
 #alpha significance
@@ -250,9 +249,9 @@ alphatest = estimate_richness(Costasamp)
 
 pairwise.wilcox.test(alphatest$Shannon, sample_data(Costasamp)$field_site) 
 pairwise.wilcox.test(alphatest$Simpson, sample_data(Costasamp)$field_site)
-pairwise.wilcox.test(alphtest$Chao1, sample_data(Costasamp)$field_site)
-pairwise.wilcox.test(alphtest$Chao1, sample_data(Costasamp)$fragmentation)
-pairwise.wilcox.test(alphtest$Shannon, sample_data(Costasamp)$fragmentation)
+pairwise.wilcox.test(alphatest$Chao1, sample_data(Costasamp)$field_site)
+pairwise.wilcox.test(alphatest$Chao1, sample_data(Costasamp)$fragmentation)
+pairwise.wilcox.test(alphatest$Shannon, sample_data(Costasamp)$fragmentation)
 #ssr and tam 0.03, ssr and eladio 0.0005, ssr and tam 0.6
 #CHAO1 is richness. Sig diff in richness of bacteria, so significance
 #Simpson measures similar to shannon, but places less emphasis on rare asvs, they will have less impact
@@ -282,6 +281,51 @@ Fragm = plot_richness(Costasamp,
   scale_color_manual(values = wes_palette("Darjeeling2"))
 library(ggpubr)
 figurealphacombo = ggarrange(Allhabitat, Fragm, nrow = 2, labels = "AUTO")
+
+#Revisions to figures, including only using the frozen samples in the analysis
+Frozsamp = subset_samples(phy16s, storage=="Liquid Nitrogen") #only frozen samples
+
+alphatest = estimate_richness(Frozsamp)
+
+pairwise.wilcox.test(alphatest$Shannon, sample_data(Frozsamp)$field_site) 
+pairwise.wilcox.test(alphatest$Simpson, sample_data(Frozsamp)$field_site)
+pairwise.wilcox.test(alphatest$Chao1, sample_data(Frozsamp)$field_site)
+pairwise.wilcox.test(alphatest$Chao1, sample_data(Frozsamp)$fragmentation)
+pairwise.wilcox.test(alphatest$Shannon, sample_data(Frozsamp)$fragmentation)
+
+#Field Shannon - ssr/elad - 0.07, ssr/tam - 0.686, elad/tam - 0.686
+#Field Simpson - ssr/elad - 0.094, ssr/tam - 0.517, elad/tam - 0.4
+#Field Chao1 - ssr/elad - 0.24, ssr/tam - 1, elad/tam - 1
+#Frag Chao1 - ssr/frag - 0.11
+#Field Shannon - srr/frag - 0.075
+
+#with all tests, an alpha of 0.05, no significance in bacterial alpha diversity among only frozen samples (n=21 rather than n=42 in original)
+
+#visualize without untransformed for alpha diversity
+library(viridis) #palatte
+library(wesanderson) #palatte
+
+#final figures
+sample_data(Frozsamp)$field_site = factor(sample_data(Frozsamp)$field_site, levels = c("Santa Rosa","Eladio's Ranch","Tamarindo"))
+Allhabitat = plot_richness(Frozsamp, 
+              x="field_site", 
+              color = "field_site",
+              measures=c("Chao1","Shannon", "Simpson")) + 
+  theme(legend.title = element_blank()) +
+  geom_boxplot() +
+  labs(x = "Habitat") +
+  scale_color_manual(values = wes_palette("Darjeeling2"))
+
+Fragm = plot_richness(Frozsamp,
+              x="fragmentation",
+              color = "fragmentation",
+              measures = c("Chao1", "Shannon", "Simpson")) +
+  theme(legend.title = element_blank()) +
+  geom_boxplot() +
+  labs(x = "Habitat") +
+  scale_color_manual(values = wes_palette("Darjeeling2"))
+library(ggpubr)
+figurealphacombo = ggarrange(Allhabitat, Fragm, nrow = 2, labels = "AUTO"); figurealphacombo
 ```
 
 I additionally found that the howler beta diversity was distinct between all three sites, an ADONIS test showing that howlers in SSR, Tamarindo, and Eladio's had distinct bacterial diversity in their gut.   
@@ -296,6 +340,9 @@ library(vegan)
 library(devtools)
 #install_github("pmartinezarbizu/pairwiseAdonis/pairwiseAdonis")
 library(pairwiseAdonis)
+
+library(microbiome)
+phy16log = transform(Costasamp, transform = "log10")
 
 phydist = phyloseq::distance(phy16log, "bray")
 df = as(sample_data(phy16log), "data.frame")
@@ -323,10 +370,6 @@ pairwise.adonis(phydist, groups)
 #betadisper testing shows acceptable variance and homogeneous dispersal, can continue to adonis, and results can be interpreted
 #pairwise adonis between all groups, showing all have significantly different bacterial diversity
 
-
-library(microbiome)
-phy16log = transform(Costasamp, transform = "log10")
-
 #other transformation options
 #phy16hell = transform(Costasamp, transform = "hellinger")
 #phy16sprop2 = transform_sample_counts(Costasamp, function(otu) otu/sum(otu))
@@ -337,6 +380,47 @@ plot_ordination(phy16log, ord.nmds.bray16log, color="field_site") +
   labs(color = "Habitat") +
   stat_ellipse()
 #PCoA plot of Bray Curtis dissimilarity, with ellipses to show clustering of groups, determined to be significant with the pairwise ADONIS
+
+#Revisions to figure including only using frozen samples in analysis
+library(microbiome)
+phy16logfr = transform(Frozsamp, transform = "log10")
+
+phydist = phyloseq::distance(phy16logfr, "bray")
+df = as(sample_data(phy16logfr), "data.frame")
+groups = df[["field_site"]]
+groups
+
+mod = betadisper(phydist, groups)
+anova(mod)
+mod.HSD = TukeyHSD(mod)
+
+plot(mod)
+boxplot(mod)
+plot(mod.HSD)
+
+mod2 = betadisper(phydist, groups, bias.adjust = T)
+anova(mod2)
+mod.HSD2 = TukeyHSD(mod2)
+plot(mod.HSD2)
+
+adonis(phydist ~ groups, perm = 999)
+
+df
+
+pairwise.adonis(phydist, groups)
+#betadisper testing shows acceptable variance and homogeneous dispersal, can continue to adonis, and results can be interpreted
+#pairwise adonis between all groups, showing all have significantly different bacterial diversity
+
+#other transformation options
+#phy16hell = transform(Costasamp, transform = "hellinger")
+#phy16sprop2 = transform_sample_counts(Costasamp, function(otu) otu/sum(otu))
+
+ord.nmds.bray16log = ordinate(phy16logfr, method="PCoA", distance="bray")
+plot_ordination(phy16logfr, ord.nmds.bray16log, color="field_site") +
+  scale_color_manual(values = wes_palette("Darjeeling2")) +
+  labs(color = "Habitat") +
+  stat_ellipse()
+#PCoA plot of Bray Curtis dissimilarity, with ellipses to show clustering of groups, determined to not be significant with the pairwise ADONIS 
 ```
 
 Finally, I found that howlers in SSR, the most isolated group, had the highest density of parasite infection, measured in parasite eggs per mL of fecal sample (after the sample was homogenized in ethanol it was stored in). 
@@ -357,4 +441,84 @@ Parasite_Density = paralocaldens %>%
   geom_errorbar(aes(ymin=AveDens-SE, ymax=AveDens+SE), width=.05); Parasite_Density
 ```
 
+## Additional Testing
+Does the storage method, either ethanol or liquid nitrogen have a significant effect on bacterial diversity?
+
+```{r}
+#alpha diversity and beta diversity 
+
+library(ggplot2)
+
+#Storage media comparison
+Costasamp = subset_samples(phy16s, field_site != "Monkey River") #all Costa Rica samples, frozen and ethanol
+
+#alpha significance
+alphatest = estimate_richness(Costasamp)
+
+pairwise.wilcox.test(alphatest$Shannon, sample_data(Costasamp)$storage) 
+pairwise.wilcox.test(alphatest$Simpson, sample_data(Costasamp)$storage)
+pairwise.wilcox.test(alphatest$Chao1, sample_data(Costasamp)$storage)
+
+#Shannon - p value 0.83 
+#Simpson - p value 0.95
+#Chao1 - p value 0.0078
+#Simpson measures similar to shannon, but places less emphasis on rare asvs, they will have less impact, Chao1 significant, richness of bacterial species is significantly different, diversity measures not significant 
+
+#visualize without untransformed for alpha diversity
+library(viridis) #palatte
+library(wesanderson) #palatte
+
+#final figures
+Storagefig = plot_richness(Costasamp, 
+              x="storage", 
+              color = "storage",
+              measures=c("Chao1","Shannon", "Simpson")) + 
+  theme(legend.title = element_blank()) +
+  geom_boxplot() +
+  labs(x = "Storage Method") +
+  scale_color_manual(values = wes_palette("Darjeeling2")); Storagefig
+
+#beta diversity of sample storage comparison
+library(vegan)
+#install.packages("devtools")
+library(devtools)
+#install_github("pmartinezarbizu/pairwiseAdonis/pairwiseAdonis")
+library(pairwiseAdonis)
+
+BiocManager::install("microbiome")
+library(microbiome)
+phy16log = transform(Costasamp, transform = "log10")
+
+phydist = phyloseq::distance(phy16log, "bray")
+df = as(sample_data(phy16log), "data.frame")
+groups = df[["storage"]]
+groups
+
+mod = betadisper(phydist, groups)
+anova(mod)
+mod.HSD = TukeyHSD(mod)
+
+plot(mod)
+boxplot(mod)
+plot(mod.HSD)
+
+mod2 = betadisper(phydist, groups, bias.adjust = T)
+anova(mod2)
+mod.HSD2 = TukeyHSD(mod2)
+plot(mod.HSD2)
+
+adonis(phydist ~ groups, perm = 999)
+
+df
+
+pairwise.adonis(phydist, groups, p.adjust.m = 'holm')
+#betadisper testing shows acceptable variance and homogeneous dispersal, can continue to adonis, and results can be interpreted
+#pairwise adonis between all groups, showing all have significantly different bacterial diversity 0.04, but figure showing extreme overlap between groups
+
+ord.nmds.bray16log = ordinate(phy16log, method="PCoA", distance="bray")
+plot_ordination(phy16log, ord.nmds.bray16log, color="storage") +
+  scale_color_manual(values = wes_palette("Darjeeling2")) +
+  labs(color = "Storage Method") +
+  stat_ellipse()
+```
 
