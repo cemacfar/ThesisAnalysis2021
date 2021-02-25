@@ -171,25 +171,31 @@ I did not find significant changes in the alpha and beta diversity of howlers wh
 
 ```{r warning = FALSE}
 library(viridis)
-plot_richness(Coprolog, 
+alphtest = estimate_richness(helminf)
+
+parasitealpha = plot_richness(helminf, 
               x="Helminth_Infection", 
               measures=c("Chao1","Shannon"), 
               color = "Helminth_Infection") + 
-  geom_boxplot() +
+  geom_point() +
+  stat_summary(fun = median, fun.min = median, fun.max = median, 
+               geom = "crossbar", width = 0.7) +
   theme(legend.position = "none") +
   labs(x = "Helminth Infection") +
   scale_color_manual(values = wes_palette("Darjeeling2"))
 
-alphtest = estimate_richness(Coprolog)
 #Shannon is diversity. Sig diff in diversity of bacteria, taking into account the richness and evenness
-pairwise.wilcox.test(alphtest$Shannon, sample_data(Coprolog)$Helminth_Infection) #santa and tam 0.03, santa and hela 0.0005, santa and tam 0.6
+pairwise.wilcox.test(alphtest$Shannon, sample_data(helminf)$Helminth_Infection)
+#0.62, no sig diff due to helminth infection
 #CHAO1 is richness. Sig diff in richness of bacteria, none
 #Simpson measures what shannon does but places less emphasis on rare species, they will have less impact
-pairwise.wilcox.test(alphtest$Chao1, sample_data(Coprolog)$Helminth_Infection)
+pairwise.wilcox.test(alphtest$Chao1, sample_data(helminf)$Helminth_Infection)
+#0.85, no sig diff due to helm infection
+
 #16s beta diversity clustering
 library(microbiome)
-phy16hellog = transform(Coprolog, transform = "log10")
-phy16helhell = transform(Coprolog, transform = "hellinger")
+phy16hellog = transform(helminf, transform = "log10")
+phy16helhell = transform(helminf, transform = "hellinger")
 
 ord.nmds.bray16hel = ordinate(phy16hellog, method="NMDS", distance="bray")
 plot_ordination(phy16hellog, ord.nmds.bray16hel, color="Helminth_Infection", title="16s Bray NMDS Infection log trans")
@@ -260,7 +266,7 @@ pairwise.wilcox.test(alphatest$Shannon, sample_data(Costasamp)$fragmentation)
 library(viridis) #palatte
 library(wesanderson) #palatte
 
-#final figures
+#final figures in original thesis, using all the samples together, frozen and ethanol
 sample_data(Costasamp)$field_site = factor(sample_data(Costasamp)$field_site, levels = c("Santa Rosa","Eladio's Ranch","Tamarindo"))
 Allhabitat = plot_richness(Costasamp, 
               x="field_site", 
@@ -284,48 +290,92 @@ figurealphacombo = ggarrange(Allhabitat, Fragm, nrow = 2, labels = "AUTO")
 
 #Revisions to figures, including only using the frozen samples in the analysis
 Frozsamp = subset_samples(phy16s, storage=="Liquid Nitrogen") #only frozen samples
+ethsamp = subset_samples(phy16s, storage=="Ethanol")
 
 alphatest = estimate_richness(Frozsamp)
-
+alphatesteth = estimate_richness(ethsamp)
+#frozen
 pairwise.wilcox.test(alphatest$Shannon, sample_data(Frozsamp)$field_site) 
 pairwise.wilcox.test(alphatest$Simpson, sample_data(Frozsamp)$field_site)
 pairwise.wilcox.test(alphatest$Chao1, sample_data(Frozsamp)$field_site)
 pairwise.wilcox.test(alphatest$Chao1, sample_data(Frozsamp)$fragmentation)
 pairwise.wilcox.test(alphatest$Shannon, sample_data(Frozsamp)$fragmentation)
 
+#ethanol
+pairwise.wilcox.test(alphatesteth$Shannon, sample_data(ethsamp)$field_site) 
+pairwise.wilcox.test(alphatesteth$Simpson, sample_data(ethsamp)$field_site)
+pairwise.wilcox.test(alphatesteth$Chao1, sample_data(ethsamp)$field_site)
+pairwise.wilcox.test(alphatesteth$Chao1, sample_data(ethsamp)$fragmentation)
+pairwise.wilcox.test(alphatesteth$Shannon, sample_data(ethsamp)$fragmentation)
+
+#frozen results
 #Field Shannon - ssr/elad - 0.07, ssr/tam - 0.686, elad/tam - 0.686
 #Field Simpson - ssr/elad - 0.094, ssr/tam - 0.517, elad/tam - 0.4
 #Field Chao1 - ssr/elad - 0.24, ssr/tam - 1, elad/tam - 1
 #Frag Chao1 - ssr/frag - 0.11
 #Field Shannon - srr/frag - 0.075
 
-#with all tests, an alpha of 0.05, no significance in bacterial alpha diversity among only frozen samples (n=21 rather than n=42 in original)
+#with all tests, an alpha of 0.05, no significance in bacterial alpha diversity among only frozen samples (n=21 rather than n=42 in original).  With the ethanol samples, Santa Rosa and Eladio's are significantly different in diversity measueres, but not richness.
 
 #visualize without untransformed for alpha diversity
 library(viridis) #palatte
 library(wesanderson) #palatte
 
-#final figures
+#final figures frozen, dotplots instead of boxplots, and median line added
 sample_data(Frozsamp)$field_site = factor(sample_data(Frozsamp)$field_site, levels = c("Santa Rosa","Eladio's Ranch","Tamarindo"))
 Allhabitat = plot_richness(Frozsamp, 
-              x="field_site", 
+              x="field_site",
               color = "field_site",
               measures=c("Chao1","Shannon", "Simpson")) + 
   theme(legend.title = element_blank()) +
-  geom_boxplot() +
+  geom_point() +
+  stat_summary(fun = median, fun.min = median, fun.max = median, 
+               geom = "crossbar", width = 0.7) +
   labs(x = "Habitat") +
   scale_color_manual(values = wes_palette("Darjeeling2"))
 
+sample_data(Frozsamp)$fragmentation = factor(sample_data(Frozsamp)$fragmentation, levels = c("Santa Rosa","Fragmented"))
 Fragm = plot_richness(Frozsamp,
               x="fragmentation",
               color = "fragmentation",
               measures = c("Chao1", "Shannon", "Simpson")) +
   theme(legend.title = element_blank()) +
-  geom_boxplot() +
+  geom_point() +
+  stat_summary(fun = median, fun.min = median, fun.max = median, 
+               geom = "crossbar", width = 0.7) +
   labs(x = "Habitat") +
   scale_color_manual(values = wes_palette("Darjeeling2"))
+
+#final figures ethanol
+sample_data(ethsamp)$field_site = factor(sample_data(ethsamp)$field_site, levels = c("Santa Rosa","Eladio's Ranch","Tamarindo"))
+Allhabitateth = plot_richness(ethsamp, 
+              x="field_site",
+              color = "field_site",
+              measures=c("Chao1","Shannon", "Simpson")) + 
+  theme(legend.title = element_blank()) +
+  geom_point() +
+  stat_summary(fun = median, fun.min = median, fun.max = median, 
+               geom = "crossbar", width = 0.7) +
+  labs(x = "Habitat") +
+  scale_color_manual(values = wes_palette("Darjeeling2"))
+
+sample_data(ethsamp)$fragmentation = factor(sample_data(ethsamp)$fragmentation, levels = c("Santa Rosa", "Fragmented"))
+Fragmeth = plot_richness(ethsamp,
+              x="fragmentation",
+              color = "fragmentation",
+              measures = c("Chao1", "Shannon", "Simpson")) +
+  theme(legend.title = element_blank()) +
+  geom_point() +
+  stat_summary(fun = median, fun.min = median, fun.max = median, 
+               geom = "crossbar", width = 0.7) +
+  labs(x = "Habitat") +
+  scale_color_manual(values = wes_palette("Darjeeling2"))
+
+#combining figures; frozen and ethanol side by side, Habitat then Fragmentation
 library(ggpubr)
-figurealphacombo = ggarrange(Allhabitat, Fragm, nrow = 2, labels = "AUTO"); figurealphacombo
+figurealphacombohab = ggarrange(Allhabitat, Allhabitateth, nrow = 2, labels = "AUTO"); figurealphacombohab
+
+figurealphacombofrag = ggarrange(Fragm, Fragmeth, nrow = 2, labels = "AUTO"); figurealphacombofrag
 ```
 
 I additionally found that the howler beta diversity was distinct between all three sites, an ADONIS test showing that howlers in SSR, Tamarindo, and Eladio's had distinct bacterial diversity in their gut.   
