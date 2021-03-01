@@ -301,6 +301,13 @@ pairwise.wilcox.test(alphatest$Chao1, sample_data(Frozsamp)$field_site)
 pairwise.wilcox.test(alphatest$Chao1, sample_data(Frozsamp)$fragmentation)
 pairwise.wilcox.test(alphatest$Shannon, sample_data(Frozsamp)$fragmentation)
 
+#more correct method for analysis
+alpharesults = estimate_richness(Frozsamp, measures = "Shannon")
+d = sample_data(Frozsamp)
+A = alpharesults[d[, 'field_site'] == "Santa Rosa",]
+B = alpharesults[d[, 'field_site'] == "Eladio's Ranch",]
+wilcox.test(A, B)
+
 #ethanol
 pairwise.wilcox.test(alphatesteth$Shannon, sample_data(ethsamp)$field_site) 
 pairwise.wilcox.test(alphatesteth$Simpson, sample_data(ethsamp)$field_site)
@@ -320,6 +327,8 @@ pairwise.wilcox.test(alphatesteth$Shannon, sample_data(ethsamp)$fragmentation)
 #visualize without untransformed for alpha diversity
 library(viridis) #palatte
 library(wesanderson) #palatte
+install.packages("ggsignif")
+library(ggsignif)
 
 #final figures frozen, dotplots instead of boxplots, and median line added
 sample_data(Frozsamp)$field_site = factor(sample_data(Frozsamp)$field_site, levels = c("Santa Rosa","Eladio's Ranch","Tamarindo"))
@@ -327,8 +336,12 @@ Allhabitat = plot_richness(Frozsamp,
               x="field_site",
               color = "field_site",
               measures=c("Chao1","Shannon", "Simpson")) + 
-  theme(legend.title = element_blank()) +
+  theme_bw() +
+  theme(legend.title = element_blank(), legend.position = "none",
+        axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
   geom_point() +
+  geom_signif(comparisons = list(c("Santa Rosa","Eladio's Ranch")), 
+              map_signif_level = c("***" = 0.001, "**" = 0.01, "*" = 0.05)) +
   stat_summary(fun = median, fun.min = median, fun.max = median, 
                geom = "crossbar", width = 0.7) +
   labs(x = "Habitat") +
@@ -339,7 +352,9 @@ Fragm = plot_richness(Frozsamp,
               x="fragmentation",
               color = "fragmentation",
               measures = c("Chao1", "Shannon", "Simpson")) +
-  theme(legend.title = element_blank()) +
+  theme_bw() +
+  theme(legend.title = element_blank(), legend.position = "none",
+        axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
   geom_point() +
   stat_summary(fun = median, fun.min = median, fun.max = median, 
                geom = "crossbar", width = 0.7) +
@@ -352,8 +367,12 @@ Allhabitateth = plot_richness(ethsamp,
               x="field_site",
               color = "field_site",
               measures=c("Chao1","Shannon", "Simpson")) + 
-  theme(legend.title = element_blank()) +
+  theme_bw() +
+  theme(legend.title = element_blank(), legend.position = "none",
+        axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
   geom_point() +
+  geom_signif(comparisons = list(c("Santa Rosa","Eladio's Ranch")), 
+              map_signif_level = c("***" = 0.001, "**" = 0.01, "*" = 0.05)) +
   stat_summary(fun = median, fun.min = median, fun.max = median, 
                geom = "crossbar", width = 0.7) +
   labs(x = "Habitat") +
@@ -364,7 +383,9 @@ Fragmeth = plot_richness(ethsamp,
               x="fragmentation",
               color = "fragmentation",
               measures = c("Chao1", "Shannon", "Simpson")) +
-  theme(legend.title = element_blank()) +
+  theme_bw() +
+  theme(legend.title = element_blank(), legend.position = "none",
+        axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
   geom_point() +
   stat_summary(fun = median, fun.min = median, fun.max = median, 
                geom = "crossbar", width = 0.7) +
