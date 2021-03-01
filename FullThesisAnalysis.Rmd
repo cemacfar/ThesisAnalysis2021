@@ -172,6 +172,7 @@ I did not find significant changes in the alpha and beta diversity of howlers wh
 ```{r warning = FALSE}
 library(viridis)
 alphtest = estimate_richness(helminf)
+modifylab = c("Negative (n = 6)", "Positive (n = 15)")
 
 parasitealpha = plot_richness(helminf, 
               x="Helminth_Infection", 
@@ -184,6 +185,7 @@ parasitealpha = plot_richness(helminf,
   theme(legend.position = "none",
         axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
   labs(x = "Helminth Infection") +
+  scale_x_discrete(labels = modifylab) +
   scale_color_manual(values = wes_palette("Darjeeling2"))
 
 #Shannon is diversity. Sig diff in diversity of bacteria, taking into account the richness and evenness
