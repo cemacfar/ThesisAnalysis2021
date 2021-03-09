@@ -307,7 +307,7 @@ pairwise.wilcox.test(alphatest$Shannon, sample_data(Frozsamp)$fragmentation)
 
 #more correct method for analysis
 #Santa vs Eladios
-alpharesults = estimate_richness(Frozsamp, measures = "Chao1")
+alpharesults = estimate_richness(Frozsamp, measures = "Shannon")
 d = sample_data(Frozsamp)
 A = alpharesults[d[, 'field_site'] == "Santa Rosa",]
 B = alpharesults[d[, 'field_site'] == "Eladio's Ranch",]
@@ -316,35 +316,32 @@ wilcox.test(A, B)
 
 alpharesults2 = estimate_richness(Frozsamp, measures = "Simpson")
 d2 = sample_data(Frozsamp)
-A2 = alpharesults[d[, 'field_site'] == "Santa Rosa",]
-B2 = alpharesults[d[, 'field_site'] == "Eladio's Ranch",]
+A2 = alpharesults2[d[, 'field_site'] == "Santa Rosa",]
+B2 = alpharesults2[d[, 'field_site'] == "Eladio's Ranch",]
 wilcox.test(A2, B2)
 #p-value = 0.02373
 
 alpharesults3 = estimate_richness(Frozsamp, measures = "Shannon")
 d3 = sample_data(Frozsamp)
-A3 = alpharesults[d[, 'field_site'] == "Santa Rosa",]
-B3 = alpharesults[d[, 'field_site'] == "Tamarindo",]
+A3 = alpharesults3[d[, 'field_site'] == "Santa Rosa",]
+B3 = alpharesults3[d[, 'field_site'] == "Tamarindo",]
 wilcox.test(A3, B3)
 
 alpharesults4 = estimate_richness(Frozsamp, measures = "Shannon")
 d4 = sample_data(Frozsamp)
-A4 = alpharesults[d[, 'field_site'] == "Eladio's Ranch",]
-B4 = alpharesults[d[, 'field_site'] == "Tamarindo",]
+A4 = alpharesults4[d[, 'field_site'] == "Eladio's Ranch",]
+B4 = alpharesults4[d[, 'field_site'] == "Tamarindo",]
 wilcox.test(A4, B4)
 
-#santa and fragmented
-alpharesults5 = estimate_richness(Frozsamp, measures = "Shannon")
-d5 = sample_data(Frozsamp)
-A5 = alpharesults[d[, 'fragmentation'] == "Santa Rosa",]
-B5 = alpharesults[d[, 'fragmentation'] == "Fragmented",]
-wilcox.test(A5, B5)
 
-alpharesults6 = estimate_richness(Frozsamp, measures = "Chao1")
-d6 = sample_data(Frozsamp)
-A6 = alpharesults[d[, 'fragmentation'] == "Santa Rosa",]
-B6 = alpharesults[d[, 'fragmentation'] == "Fragmented",]
-wilcox.test(A6, B6)
+#santa and fragmented
+alpharesults5 = estimate_richness(Frozsamp, measures = "Simpson")
+d5 = sample_data(Frozsamp)
+A5 = alpharesults5[d5[, 'fragmentation'] == "Santa Rosa",]
+B5 = alpharesults5[d5[, 'fragmentation'] == "Fragmented",]
+wilcox.test(A5, B5)
+#shannon = 0.7523
+#simpson = 0.6569
 
 #ethanol
 pairwise.wilcox.test(alphatesteth$Shannon, sample_data(ethsamp)$field_site) 
@@ -353,6 +350,16 @@ pairwise.wilcox.test(alphatesteth$Chao1, sample_data(ethsamp)$field_site)
 pairwise.wilcox.test(alphatesteth$Chao1, sample_data(ethsamp)$fragmentation)
 pairwise.wilcox.test(alphatesteth$Shannon, sample_data(ethsamp)$fragmentation)
 
+alpharesults6 = estimate_richness(ethsamp, measures = "Shannon")
+d6 = sample_data(ethsamp)
+A6 = alpharesults6[d6[, 'fragmentation'] == "Santa Rosa",]
+B6 = alpharesults6[d6[, 'fragmentation'] == "Fragmented",]
+wilcox.test(A6, B6)
+alpharesults7 = estimate_richness(ethsamp, measures = "Shannon")
+d7 = sample_data(ethsamp)
+A7 = alpharesults7[d7[, 'field_site'] == "Eladio's Ranch",]
+B7 = alpharesults7[d7[, 'field_site'] == "Tamarindo",]
+wilcox.test(A7, B7)
 #frozen results
 #Field Shannon - ssr/elad - 0.07, ssr/tam - 0.686, elad/tam - 0.686
 #Field Simpson - ssr/elad - 0.094, ssr/tam - 0.517, elad/tam - 0.4
