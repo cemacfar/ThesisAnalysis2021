@@ -390,7 +390,7 @@ Allhabitat = plot_richness(Frozsamp,
   stat_summary(fun = median, fun.min = median, fun.max = median, 
                geom = "crossbar", width = 0.7) +
   labs(x = "Habitat") +
-  scale_color_manual(values = wes_palette("Darjeeling2"))
+  scale_color_manual(values = viridis(n=3))
 
 sample_data(Frozsamp)$fragmentation = factor(sample_data(Frozsamp)$fragmentation, levels = c("Santa Rosa","Fragmented"))
 Fragm = plot_richness(Frozsamp,
@@ -404,7 +404,7 @@ Fragm = plot_richness(Frozsamp,
   stat_summary(fun = median, fun.min = median, fun.max = median, 
                geom = "crossbar", width = 0.7) +
   labs(x = "Habitat") +
-  scale_color_manual(values = wes_palette("Darjeeling2"))
+  scale_color_manual(values = viridis(n=2))
 
 #final figures ethanol
 sample_data(ethsamp)$field_site = factor(sample_data(ethsamp)$field_site, levels = c("Santa Rosa","Eladio's Ranch","Tamarindo"))
@@ -421,7 +421,7 @@ Allhabitateth = plot_richness(ethsamp,
   stat_summary(fun = median, fun.min = median, fun.max = median, 
                geom = "crossbar", width = 0.7) +
   labs(x = "Habitat") +
-  scale_color_manual(values = wes_palette("Darjeeling2"))
+  scale_color_manual(values = viridis(n=3))
 
 sample_data(ethsamp)$fragmentation = factor(sample_data(ethsamp)$fragmentation, levels = c("Santa Rosa", "Fragmented"))
 Fragmeth = plot_richness(ethsamp,
@@ -435,7 +435,7 @@ Fragmeth = plot_richness(ethsamp,
   stat_summary(fun = median, fun.min = median, fun.max = median, 
                geom = "crossbar", width = 0.7) +
   labs(x = "Habitat") +
-  scale_color_manual(values = wes_palette("Darjeeling2"))
+  scale_color_manual(values = viridis(n=2))
 
 #combining figures; frozen and ethanol side by side, Habitat then Fragmentation
 library(ggpubr)
@@ -533,7 +533,7 @@ pairwise.adonis(phydist, groups)
 
 ord.nmds.bray16log = ordinate(phy16logfr, method="PCoA", distance="bray")
 plot_ordination(phy16logfr, ord.nmds.bray16log, color="field_site") +
-  scale_color_manual(values = wes_palette("Darjeeling2")) +
+  scale_color_manual(values = viridis(n=3)) +
   labs(color = "Habitat") +
   stat_ellipse()
 #PCoA plot of Bray Curtis dissimilarity, with ellipses to show clustering of groups, determined to not be significant with the pairwise ADONIS 
@@ -542,8 +542,8 @@ plot_ordination(phy16logfr, ord.nmds.bray16log, color="field_site") +
 Finally, I found that howlers in SSR, the most isolated group, had the highest density of parasite infection, measured in parasite eggs per mL of fecal sample (after the sample was homogenized in ethanol it was stored in). 
 
 ```{r warning = FALSE}
-paralocaldens <- read_excel("Desktop/Masters /Writing/Figure.xlsx", 
-                            sheet = "fig2edit")
+paralocaldens <- read_excel("~/Desktop/Masters /Writing/Figure.xlsx", 
+    sheet = "fig2edit")
 View(paralocaldens)
 
 Parasite_Density = paralocaldens %>%
@@ -555,6 +555,19 @@ Parasite_Density = paralocaldens %>%
   scale_fill_manual(values = wes_palette("Darjeeling2")) +
   theme(legend.position = "none") +
   geom_errorbar(aes(ymin=AveDens-SE, ymax=AveDens+SE), width=.05); Parasite_Density
+
+paralocaldensALL <- read_excel("~/Desktop/Masters /Writing/Figure.xlsx", 
+    sheet = "fig2")
+
+Parasite_DensityALL = paralocaldensALL %>%
+  arrange(AveDensPar) %>%  
+  mutate(Location = factor(Location, levels=c("Santa Rosa (n = 13)", "Eladio's (n = 4)", "Tamarindo (n = 4)"))) %>%
+  ggplot(aes(x = Location, y = AveDensPar)) + 
+                      geom_col(aes(fill = Location)) +
+                      ylab("Density (eggs/mL)") +
+  scale_fill_manual(values = wes_palette("Darjeeling2")) +
+  theme(legend.position = "none") +
+  geom_errorbar(aes(ymin=AveDensPar-SE, ymax=AveDensPar+SE), width=.05); Parasite_DensityALL
 ```
 
 ## Additional Testing
